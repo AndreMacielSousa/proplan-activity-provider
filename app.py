@@ -55,6 +55,7 @@ def index():
 
       <p>
         Para mais detalhes, consulte a documentação no repositório GitHub.
+        https://github.com/AndreMacielSousa/proplan-activity-provider
       </p>
     </body>
     </html>
