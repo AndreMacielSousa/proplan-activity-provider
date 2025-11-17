@@ -1,0 +1,8 @@
+{
+  "name": "ProPlan – Simulador de Gestão de Projetos",
+  "config_url": "https://proplan-activity-provider.onrender.com/config-proplan",
+  "json_params_url": "https://proplan-activity-provider.onrender.com/json-params-proplan",
+  "user_url": "https://proplan-activity-provider.onrender.com/deploy-proplan",
+  "analytics_url": "https://proplan-activity-provider.onrender.com/analytics-proplan",
+  "analytics_list_url": "https://proplan-activity-provider.onrender.com/analytics-list-proplan"
+}

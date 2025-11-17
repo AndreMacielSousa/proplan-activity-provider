@@ -45,6 +45,10 @@ Content-Type: application/json
 "activityID": "TESTE123"
 }
 
+GET https://proplan-activity-provider.onrender.com/json-params-proplan
+GET https://proplan-activity-provider.onrender.com/analytics-list-proplan
+GET https://proplan-activity-provider.onrender.com/config-proplan
+
 
 ---
 
