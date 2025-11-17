@@ -1,0 +1,13 @@
+[
+  { "name": "scenario_type",           "type": "text/plain" },
+  { "name": "sprints",                 "type": "integer" },
+  { "name": "difficulty",              "type": "integer" },
+  { "name": "timebox_per_sprint_min",  "type": "integer" },
+  { "name": "weights_json",            "type": "text/plain" },
+  { "name": "initial_backlog_url",     "type": "URL" },
+  { "name": "budget_total",            "type": "integer" },
+  { "name": "deadline_iso",            "type": "text/plain" },
+  { "name": "allow_replans",           "type": "boolean" },
+  { "name": "max_replans",             "type": "integer" },
+  { "name": "rubric_url",              "type": "URL" }
+]

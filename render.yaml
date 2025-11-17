@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: proplan-activity-provider
+    env: python
+    region: frankfurt         # ou outro datacenter que preferires
+    plan: free                # free tier é suficiente para esta semana
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    autoDeploy: true

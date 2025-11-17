@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <title>Configuração da atividade ProPlan</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 1.5rem;
+      line-height: 1.5;
+    }
+    .field {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    input, textarea {
+      width: 100%;
+      max-width: 40rem;
+      padding: 0.35rem 0.5rem;
+      box-sizing: border-box;
+    }
+    small {
+      color: #555;
+      display: block;
+      margin-top: 0.15rem;
+    }
+  </style>
+</head>
+<body>
+  <h2>Configuração do ProPlan – Simulador de Gestão de Projetos</h2>
+
+  <p>
+    Os campos abaixo são lidos automaticamente pela Inven!RA, de acordo
+    com a definição em <code>json_params_url.json</code>. Não é necessário
+    qualquer botão de submissão nesta página.
+  </p>
+
+  <div class="field">
+    <label for="scenario_type">Tipo de cenário (scenario_type)</label>
+    <input id="scenario_type" name="scenario_type" type="text" />
+    <small>Ex.: desenvolvimento de software, organização de evento, construção.</small>
+  </div>
+
+  <div class="field">
+    <label for="sprints">Número de sprints (sprints)</label>
+    <input id="sprints" name="sprints" type="number" min="1" />
+  </div>
+
+  <div class="field">
+    <label for="difficulty">Nível de dificuldade (difficulty)</label>
+    <input id="difficulty" name="difficulty" type="number" min="1" max="3" />
+    <small>1 – introdutório, 2 – intermédio, 3 – avançado.</small>
+  </div>
+
+  <div class="field">
+    <label for="timebox_per_sprint_min">Tempo por sprint em minutos (timebox_per_sprint_min)</label>
+    <input id="timebox_per_sprint_min" name="timebox_per_sprint_min" type="number" min="1" />
+  </div>
+
+  <div class="field">
+    <label for="weights_json">Pesos dos critérios em JSON (weights_json)</label>
+    <textarea id="weights_json" name="weights_json" rows="3" placeholder='{"prazo":0.25,"custo":0.25,"qualidade":0.25,"satisfacao":0.25}'></textarea>
+  </div>
+
+  <div class="field">
+    <label for="initial_backlog_url">URL do backlog inicial (initial_backlog_url)</label>
+    <input id="initial_backlog_url" name="initial_backlog_url" type="url" />
+  </div>
+
+  <div class="field">
+    <label for="budget_total">Orçamento total (budget_total)</label>
+    <input id="budget_total" name="budget_total" type="number" min="0" />
+  </div>
+
+  <div class="field">
+    <label for="deadline_iso">Deadline em formato ISO 8601 (deadline_iso)</label>
+    <input id="deadline_iso" name="deadline_iso" type="text" placeholder="2025-12-31T23:59:59Z" />
+  </div>
+
+  <div class="field">
+    <label for="allow_replans">Permitir replaneamentos? (allow_replans)</label>
+    <input id="allow_replans" name="allow_replans" type="checkbox" />
+  </div>
+
+  <div class="field">
+    <label for="max_replans">Número máximo de replaneamentos (max_replans)</label>
+    <input id="max_replans" name="max_replans" type="number" min="0" />
+  </div>
+
+  <div class="field">
+    <label for="rubric_url">URL da grelha de avaliação (rubric_url)</label>
+    <input id="rubric_url" name="rubric_url" type="url" />
+  </div>
+
+  <p>
+    Esta página é apenas de configuração. A Inven!RA recolhe os valores
+    dos campos de forma automática e cria as instâncias do ProPlan de
+    acordo com estes parâmetros.
+  </p>
+</body>
+</html>

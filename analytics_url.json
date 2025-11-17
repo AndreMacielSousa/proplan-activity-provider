@@ -1,0 +1,15 @@
+{
+  "quantAnalytics": [
+    { "name": "decisions_count",          "type": "integer" },
+    { "name": "total_time_seconds",       "type": "integer" },
+    { "name": "cost_variance",            "type": "integer" },
+    { "name": "schedule_variance_days",   "type": "integer" },
+    { "name": "client_satisfaction_score","type": "integer" },
+    { "name": "replans_count",            "type": "integer" }
+  ],
+  "qualAnalytics": [
+    { "name": "decision_log_url",         "type": "URL" },
+    { "name": "timeline_url",             "type": "URL" },
+    { "name": "postmortem_reflection",    "type": "text/plain" }
+  ]
+}
