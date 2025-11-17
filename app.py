@@ -5,6 +5,62 @@ from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
+@app.get("/")
+def index():
+    """
+    Página inicial informativa do Activity Provider ProPlan.
+    Não faz parte da especificação Inven!RA, mas ajuda nos testes humanos.
+    """
+    return """
+    <!DOCTYPE html>
+    <html lang="pt">
+    <head>
+      <meta charset="UTF-8" />
+      <title>ProPlan Activity Provider</title>
+      <style>
+        body {
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          margin: 2rem;
+          line-height: 1.5;
+        }
+        h1 {
+          font-size: 1.6rem;
+          margin-bottom: 0.5rem;
+        }
+        code {
+          background: #f3f3f3;
+          padding: 0.1rem 0.25rem;
+          border-radius: 4px;
+        }
+        ul {
+          margin-top: 0.5rem;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>ProPlan – Activity Provider</h1>
+      <p>
+        Este serviço expõe os Web services RESTful necessários para integração com a
+        arquitetura Inven!RA.
+      </p>
+
+      <h2>Endpoints disponíveis</h2>
+      <ul>
+        <li><code>GET /config-proplan</code> – página de configuração (config_url)</li>
+        <li><code>GET /json-params-proplan</code> – parâmetros da atividade em JSON (json_params_url)</li>
+        <li><code>GET /deploy-proplan?activityID=...</code> – deployment da instância (user_url)</li>
+        <li><code>GET /analytics-list-proplan</code> – lista de analytics disponíveis (analytics_list_url)</li>
+        <li><code>POST /analytics-proplan</code> – valores de analytics para uma instância (analytics_url)</li>
+      </ul>
+
+      <p>
+        Para mais detalhes, consulte a documentação no repositório GitHub.
+      </p>
+    </body>
+    </html>
+    """
+
+
 # Domínio público do serviço (Render)
 BASE_URL = "https://proplan-activity-provider.onrender.com"
 
