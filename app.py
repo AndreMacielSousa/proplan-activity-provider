@@ -9,7 +9,7 @@ app = Flask(__name__)
 def index():
     """
     Página inicial informativa do Activity Provider ProPlan.
-    Não faz parte da especificação Inven!RA, mas ajuda nos testes humanos.
+    Não faz parte da especificação Inven!RA, mas ajuda nos testes.
     """
     return """
     <!DOCTYPE html>
@@ -54,8 +54,7 @@ def index():
       </ul>
 
       <p>
-        Para mais detalhes, consulte a documentação no repositório GitHub.
-        https://github.com/AndreMacielSousa/proplan-activity-provider
+        Para mais detalhes, consulte a documentação no repositório <a href="https://github.com/AndreMacielSousa/proplan-activity-provider">GitHub</a>
       </p>
     </body>
     </html>
