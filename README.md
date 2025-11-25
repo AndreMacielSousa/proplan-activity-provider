@@ -36,7 +36,7 @@ Base URL do serviço já publicado:
 ## 4. Testes recomendados
 
 ### POST – Analytics da atividade
-```http
+
 POST https://proplan-activity-provider.onrender.com/analytics-proplan
 Content-Type: application/json
 
