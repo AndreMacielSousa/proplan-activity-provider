@@ -10,16 +10,28 @@ from exceptions import InvalidRequestError
 
 app = Flask(__name__)
 
+
+# O Facade passa agora a ser o ponto único que conhece:
+#   o contrato (analytics_list_url)
+#   os valores (analytics_url)
+
 class _RepoAdapter:
     """
-    Adaptador interno (temporário) para ligar o Facade ao modelo atual.
-    Aqui encapsulamos o Factory Method (RepositoryFactory) e expomos operações
-    de alto nível consumidas pela Facade.
+    Adaptador interno que encapsula o Factory Method e fornece
+    operações de alto nível ao ProPlanServiceFacade.
     """
 
     def get_analytics(self, activity_id: str) -> list[dict]:
         repo = RepositoryFactory.create_analytics_repository()
         return repo.get_analytics(activity_id)
+
+    def get_analytics_contract(self) -> dict:
+        """
+        Devolve o contrato de analytics (analytics_list_url),
+        usando o mesmo esquema que suporta os valores.
+        """
+        return ANALYTICS_SCHEMA
+
 
 
 repo_adapter = _RepoAdapter()
@@ -299,10 +311,24 @@ def analytics_list_proplan():
     """
     analytics_list_url:
     Lista dos analytics quantitativos e qualitativos que o ProPlan recolhe.
+
+    A obtenção do contrato é agora delegada no ProPlanServiceFacade,
+    garantindo coerência com o endpoint analytics_url.
+    """
+    return jsonify(facade.get_analytics_contract()), 200
+
+
+'''
+@app.get("/analytics-list-proplan")
+def analytics_list_proplan():
+    """
+    analytics_list_url:
+    Lista dos analytics quantitativos e qualitativos que o ProPlan recolhe.
     Usa o ficheiro analytics_url.json como esquema.
     """
     return jsonify(ANALYTICS_SCHEMA)
 
+'''
 '''
 @app.post("/analytics-proplan")
 def analytics_proplan():
