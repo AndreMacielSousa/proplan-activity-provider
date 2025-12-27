@@ -4,7 +4,26 @@ from abc import ABC, abstractmethod
 
 from flask import Flask, jsonify, render_template, request
 
+from services.proplan_facade import ProPlanServiceFacade
+from exceptions import InvalidRequestError
+
+
 app = Flask(__name__)
+
+class _RepoAdapter:
+    """
+    Adaptador interno (temporário) para ligar o Facade ao modelo atual.
+    Aqui encapsulamos o Factory Method (RepositoryFactory) e expomos operações
+    de alto nível consumidas pela Facade.
+    """
+
+    def get_analytics(self, activity_id: str) -> list[dict]:
+        repo = RepositoryFactory.create_analytics_repository()
+        return repo.get_analytics(activity_id)
+
+
+repo_adapter = _RepoAdapter()
+facade = ProPlanServiceFacade(repo_adapter)
 
 
 @app.get("/")
@@ -284,7 +303,7 @@ def analytics_list_proplan():
     """
     return jsonify(ANALYTICS_SCHEMA)
 
-
+'''
 @app.post("/analytics-proplan")
 def analytics_proplan():
     """
@@ -310,9 +329,33 @@ def analytics_proplan():
 
     return jsonify(response)
 
+'''
+
+# =============================================================================
+# Padrão de Estrutura: Facade
+# =============================================================================
+
+@app.post("/analytics-proplan")
+def analytics_proplan():
+    """
+    analytics_url:
+    Recebe um JSON com { "activityID": "<id>" } e devolve
+    analytics fictícios para essa instância, num formato
+    compatível com a Inven!RA.
+
+    Neste passo, o endpoint fica "magro" e delega a orquestração
+    no ProPlanServiceFacade (Facade virado para dentro).
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        activity_id = data.get("activityID")
+        response = facade.get_analytics(activity_id)
+        return jsonify(response), 200
+    except InvalidRequestError as e:
+        return jsonify({"error": str(e)}), 400
+
 
 # -----------------------------------------------------------------------------
-
 
 if __name__ == "__main__":
     # Execução local para desenvolvimento
