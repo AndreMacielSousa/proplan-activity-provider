@@ -29,20 +29,28 @@ Base URL do serviço já publicado:
 - `render.yaml` – Configuração do serviço para Render  
 - `json_params_url.json` – Lista de parâmetros de configuração  
 - `analytics_url.json` – Esquema de analytics (quantitativos e qualitativos)  
-- `templates/config_proplan.html` – Página HTML de configuração embebida  
+- `templates/config_proplan.html` – Página HTML de configuração embebida
+- `services/proplan_facade.py` – Fachada interna (Facade) para orquestração dos pedidos
+- `serializers/analytics_serializer.py` – Normalização/serialização das respostas de analytics
+- `exceptions.py` – Exceções de validação (mapeadas para HTTP 400)
 
 ---
 
 ## 4. Testes recomendados
 
-### POST – Analytics da atividade
+### POST
 
-POST https://proplan-activity-provider.onrender.com/analytics-proplan
-Content-Type: application/json
+### PowerShell (Windows) – exemplo de teste do POST
 
-{
-  "activityID": "TESTE123"
-}
+```powershell
+Invoke-WebRequest `
+  -Method POST `
+  -Uri https://proplan-activity-provider.onrender.com/analytics-proplan `
+  -ContentType "application/json" `
+  -Body '{"activityID":"TESTE123"}'
+```
+
+### GET
 
 GET – Parâmetros da atividade
 GET https://proplan-activity-provider.onrender.com/json-params-proplan
@@ -53,9 +61,10 @@ GET https://proplan-activity-provider.onrender.com/analytics-list-proplan
 GET – Configuração HTML
 GET https://proplan-activity-provider.onrender.com/config-proplan
 
+
 ## 5. Padrão de criação aplicado (Factory Method)
 
-Na segunda fase do projeto foi aplicado o padrão de criação Factory Method (Gamma et al., 2000) ao processo de obtenção dos dados analíticos usados pelo serviço analytics_url (POST /analytics-proplan).
+Na segunda fase do projeto foi aplicado o padrão de criação Factory Method (Gamma et al., 1995) ao processo de obtenção dos dados analíticos usados pelo serviço analytics_url (POST /analytics-proplan).
 
 Foi introduzida a interface AnalyticsRepository, que define o contrato que qualquer repositório de analytics deve cumprir. A implementação concreta atual é JsonAnalyticsRepository, que gera valores fictícios com base no esquema definido em analytics_url.json.
 
@@ -63,19 +72,36 @@ Para encapsular o ponto de variação — a origem e forma de criação dos repo
 
 O endpoint /analytics-proplan passa assim a depender apenas da abstração AnalyticsRepository, reduzindo o acoplamento e preparando o módulo para futura extensibilidade, tal como recomendado nas boas práticas de design de software e na unidade curricular de Arquitetura e Padrões de Software.
 
-## 6. Referencias
+## 6. Padrão estrutural aplicado (Facade)
 
-Morgado, L., & Cassola, F. (2022). Activity Providers na Inven!RA. Universidade Aberta.
+Na fase atual foi aplicado o padrão estrutural **Facade** (GAMMA et al., 1995) para reduzir o acoplamento entre a camada de endpoints Flask e o subsistema interno responsável pela validação do pedido, seleção do repositório e preparação/normalização das respostas.
 
-Grilo, R., Baptista, R., Schlemmer, E., Gütl, C., Beck, D., Coelho, A., & Morgado, L. (2022).
-Assessment and Tracking of Learning Activities on a Remote Computer Networking Laboratory Using the Inven!RA Architecture.
+No contexto Inven!RA, o Activity Provider é essencialmente **reativo** (não inicia interações; responde a pedidos). Por isso, a fachada não está “virada para a Inven!RA” (que define a sua API e não se adapta ao fornecedor), mas sim **virada para dentro**, funcionando como um “entreposto” de orquestração para os subcomponentes internos.
 
-Cardoso, P., Morgado, L., & Coelho, A. (2020).
-Authoring Game-Based Learning Activities that are Manageable by Teachers.
+### 6.1. Alterações realizadas
+Foi introduzido o componente `ProPlanServiceFacade` e, de forma incremental, os endpoints abaixo passaram a delegar nele:
 
-Gamma, E., Helm, R., Johnson, R., & Vlissides, J. (2000). Padrões de Projeto: Soluções Reutilizáveis de Software Orientado a Objetos. Bookman.
+- `POST /analytics-proplan` (analytics_url): valida `activityID`, obtém dados via repositório e devolve analytics no formato esperado.
+- `GET /analytics-list-proplan` (analytics_list_url): devolve o contrato (quantAnalytics/qualAnalytics) através do mesmo ponto arquitetural, reforçando coerência entre “o que se anuncia” e “o que se devolve”.
 
-## 7. Autor
+Este desenho permite manter os endpoints “magros” (parsing e códigos HTTP) e concentrar as regras/compromissos do subsistema no Facade, melhorando legibilidade, manutenção e extensibilidade.
+
+### 6.2. Estrutura introduzida no repositório
+- `services/proplan_facade.py` – implementação do `ProPlanServiceFacade`
+- `serializers/analytics_serializer.py` – ponto único para normalização (nesta fase com comportamento pass-through)
+- `exceptions.py` – exceções de validação (ex.: `InvalidRequestError`)
+
+## 7. Referências
+
+GAMMA, E.; HELM, R.; JOHNSON, R.; VLISSIDES, J. **Design patterns: elements of reusable object-oriented software**. Reading: Addison-Wesley, 1995.
+
+MORGADO, L.; CASSOLA, F. **Activity Providers na Inven!RA**. Lisboa: Universidade Aberta, 2022.
+
+GRILO, R. et al. Assessment and tracking of learning activities on a remote computer networking laboratory using the Inven!RA architecture. *[S.l.]*, 2022.
+
+CARDOSO, P.; MORGADO, L.; COELHO, A. Authoring game-based learning activities that are manageable by teachers. *[S.l.]*, 2020.
+
+## 8. Autor
 André Sousa – 1300012
 Mestrado em Engenharia Informática e Tecnologia Web – Universidade Aberta
 Unidade Curricular: Arquitetura e Padrões de Software
