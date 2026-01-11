@@ -37,6 +37,23 @@ class _RepoAdapter:
 repo_adapter = _RepoAdapter()
 facade = ProPlanServiceFacade(repo_adapter)
 
+# Padrão Comportamento Observer
+from services.observers import (
+    DeployRegistryObserver,
+    AnalyticsRequestCounterObserver,
+    DecisionLogObserver,
+)
+
+deploy_registry = DeployRegistryObserver()
+analytics_counter = AnalyticsRequestCounterObserver()
+decision_log = DecisionLogObserver()
+
+facade.attach(deploy_registry)
+facade.attach(analytics_counter)
+facade.attach(decision_log)
+
+
+
 
 @app.get("/")
 def index():
