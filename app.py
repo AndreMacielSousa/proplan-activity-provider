@@ -7,6 +7,14 @@ from flask import Flask, jsonify, render_template, request
 from services.proplan_facade import ProPlanServiceFacade
 from exceptions import InvalidRequestError
 
+#Observer
+from services.observers import (
+    DeployRegistryObserver,
+    AnalyticsRequestCounterObserver,
+    DecisionLogObserver,
+)
+
+
 
 app = Flask(__name__)
 
@@ -37,12 +45,6 @@ class _RepoAdapter:
 repo_adapter = _RepoAdapter()
 facade = ProPlanServiceFacade(repo_adapter)
 
-# Padrão Comportamento Observer
-from services.observers import (
-    DeployRegistryObserver,
-    AnalyticsRequestCounterObserver,
-    DecisionLogObserver,
-)
 
 deploy_registry = DeployRegistryObserver()
 analytics_counter = AnalyticsRequestCounterObserver()
