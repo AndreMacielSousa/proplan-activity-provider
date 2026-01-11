@@ -15,8 +15,7 @@ class ProPlanServiceFacade(EventPublisher):
     """
 
     def __init__(self, repo):
-        # 'repo' será, por agora, um objeto com funções já existentes no app.py
-        # (no próximo passo substituímos por uma classe/repositório dedicado).
+        super().__init__()
         self._repo = repo
 
     def get_analytics(self, activity_id: str):
