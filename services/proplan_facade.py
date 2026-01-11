@@ -3,10 +3,12 @@
 # ou até funções que já existam). 
 # Evitamos “refatoração big-bang”.
 
+from services.events import EventPublisher, DomainEvent
+
 from exceptions import InvalidRequestError
 from serializers.analytics_serializer import serialize_analytics, serialize_contract
 
-class ProPlanServiceFacade:
+class ProPlanServiceFacade(EventPublisher):
     """
     Fachada virada para dentro: concentra orquestração interna,
     mantendo os endpoints Flask reduzidos a parsing e HTTP.
