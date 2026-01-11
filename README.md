@@ -91,7 +91,54 @@ Este desenho permite manter os endpoints “magros” (parsing e códigos HTTP) 
 - `serializers/analytics_serializer.py` – ponto único para normalização (nesta fase com comportamento pass-through)
 - `exceptions.py` – exceções de validação (ex.: `InvalidRequestError`)
 
-## 7. Referências
+## 7. Padrão comportamental aplicado (Observer)
+
+Na fase atual do projeto foi aplicado o padrão comportamental **Observer** (Gamma et al., 1995) ao núcleo de orquestração interna do Activity Provider, concretamente ao componente `ProPlanServiceFacade`.
+
+### 7.1. Motivação
+
+O Activity Provider ProPlan é, por natureza, um sistema **reativo**, respondendo a eventos externos como:
+- pedidos de deploy de instâncias (`user_url`);
+- pedidos de recolha de analytics (`analytics_url`).
+
+Neste contexto, identificou-se a necessidade de desacoplar o fluxo principal de orquestração (validação, obtenção e devolução de dados) de responsabilidades transversais, como:
+- registo de deploys;
+- contagem de pedidos de analytics;
+- manutenção de rastos qualitativos associados ao ciclo de vida da instância.
+
+O padrão Observer permite explicitar estes pontos de variação sem introduzir dependências diretas entre a fachada e essas funcionalidades secundárias.
+
+### 7.2. Ponto de aplicação no projeto
+
+O componente `ProPlanServiceFacade` atua simultaneamente como:
+- **Facade** (padrão estrutural), concentrando a orquestração interna;
+- **Subject** do padrão Observer, emitindo eventos de domínio relevantes.
+
+Foram definidos eventos explícitos de ciclo de vida:
+- `ActivityDeployed` – emitido após o deploy de uma instância;
+- `AnalyticsRequested` – emitido aquando de pedidos ao serviço `analytics_url`.
+
+### 7.3. Observadores concretos implementados
+
+Foram implementados os seguintes *ConcreteObservers*, registados no arranque da aplicação:
+
+- `DeployRegistryObserver` – regista metadados mínimos do deploy por `activityID`;
+- `AnalyticsRequestCounterObserver` – contabiliza pedidos ao serviço de analytics por instância;
+- `DecisionLogObserver` – mantém um rasto textual (mock) de eventos relevantes, preparando a evolução futura para analytics qualitativos persistentes.
+
+Estas implementações são deliberadamente leves e em memória, sendo suficientes para demonstrar o padrão e mantendo o sistema alinhado com a fase atual do projeto.
+
+### 7.4. Benefícios arquiteturais
+
+A aplicação do padrão Observer permite:
+- reduzir o acoplamento entre a fachada e funcionalidades transversais;
+- introduzir novos mecanismos de monitorização ou análise sem alterar os endpoints;
+- reforçar a extensibilidade e legibilidade do código;
+- tornar explícita a natureza orientada a eventos do Activity Provider.
+
+O comportamento observável dos endpoints permanece inalterado, garantindo compatibilidade com a especificação Inven!RA.
+
+## 8. Referências
 
 GAMMA, E.; HELM, R.; JOHNSON, R.; VLISSIDES, J. **Design patterns: elements of reusable object-oriented software**. Reading: Addison-Wesley, 1995.
 
@@ -101,7 +148,7 @@ GRILO, R. et al. Assessment and tracking of learning activities on a remote comp
 
 CARDOSO, P.; MORGADO, L.; COELHO, A. Authoring game-based learning activities that are manageable by teachers. *[S.l.]*, 2020.
 
-## 8. Autor
+## 9. Autor
 André Sousa – 1300012
 Mestrado em Engenharia Informática e Tecnologia Web – Universidade Aberta
 Unidade Curricular: Arquitetura e Padrões de Software
