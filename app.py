@@ -1,60 +1,21 @@
-import json
 from pathlib import Path
-from abc import ABC, abstractmethod
+import os
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, request
 
-from services.proplan_facade import ProPlanServiceFacade
+from application.proplan_app_service import ProPlanApplicationService
 from exceptions import InvalidRequestError
+from services.proplan_facade import ProPlanServiceFacade
+from services.repositories import ProPlanRepository
 
-#Observer
+# Observer
 from services.observers import (
     DeployRegistryObserver,
     AnalyticsRequestCounterObserver,
     DecisionLogObserver,
 )
 
-
-
 app = Flask(__name__)
-
-
-# O Facade passa agora a ser o ponto único que conhece:
-#   o contrato (analytics_list_url)
-#   os valores (analytics_url)
-
-class _RepoAdapter:
-    """
-    Adaptador interno que encapsula o Factory Method e fornece
-    operações de alto nível ao ProPlanServiceFacade.
-    """
-
-    def get_analytics(self, activity_id: str) -> list[dict]:
-        repo = RepositoryFactory.create_analytics_repository()
-        return repo.get_analytics(activity_id)
-
-    def get_analytics_contract(self) -> dict:
-        """
-        Devolve o contrato de analytics (analytics_list_url),
-        usando o mesmo esquema que suporta os valores.
-        """
-        return ANALYTICS_SCHEMA
-
-
-
-repo_adapter = _RepoAdapter()
-facade = ProPlanServiceFacade(repo_adapter)
-
-
-deploy_registry = DeployRegistryObserver()
-analytics_counter = AnalyticsRequestCounterObserver()
-decision_log = DecisionLogObserver()
-
-facade.attach(deploy_registry)
-facade.attach(analytics_counter)
-facade.attach(decision_log)
-
-
 
 
 @app.get("/")
@@ -75,18 +36,9 @@ def index():
           margin: 2rem;
           line-height: 1.5;
         }
-        h1 {
-          font-size: 1.6rem;
-          margin-bottom: 0.5rem;
-        }
-        code {
-          background: #f3f3f3;
-          padding: 0.1rem 0.25rem;
-          border-radius: 4px;
-        }
-        ul {
-          margin-top: 0.5rem;
-        }
+        h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+        code { background: #f3f3f3; padding: 0.1rem 0.25rem; border-radius: 4px; }
+        ul { margin-top: 0.5rem; }
       </style>
     </head>
     <body>
@@ -106,179 +58,41 @@ def index():
       </ul>
 
       <p>
-        Para mais detalhes, consulte a documentação no repositório <a href="https://github.com/AndreMacielSousa/proplan-activity-provider">GitHub</a>
+        Para mais detalhes, consulte a documentação no repositório
+        <a href="https://github.com/AndreMacielSousa/proplan-activity-provider">GitHub</a>
       </p>
     </body>
     </html>
     """
 
 
-# Domínio público do serviço (Render)
-BASE_URL = "https://proplan-activity-provider.onrender.com"
+# -------------------------------------------------------------------------
+# Composição (wiring) — isolada num único local.
+# O objetivo é impedir que o módulo Flask acumule lógica de domínio.
+# -------------------------------------------------------------------------
 
-# Diretório base do projeto (onde estão os JSON)
+# Permite override por variável de ambiente (útil em dev/local)
+BASE_URL = os.getenv("PROPLAN_BASE_URL", "https://proplan-activity-provider.onrender.com")
 BASE_DIR = Path(__file__).resolve().parent
 
-# Caminhos para os ficheiros JSON de suporte
-JSON_PARAMS_PATH = BASE_DIR / "json_params_url.json"
-ANALYTICS_SCHEMA_PATH = BASE_DIR / "analytics_url.json"
+# Repositório + Facade + Application Service
+repo = ProPlanRepository(base_url=BASE_URL, base_dir=BASE_DIR)
+facade = ProPlanServiceFacade(repo)
+app_service = ProPlanApplicationService(facade)
+
+# Ligação dos observadores (Observer) no arranque
+deploy_registry = DeployRegistryObserver()
+analytics_counter = AnalyticsRequestCounterObserver()
+decision_log = DecisionLogObserver()
+
+facade.attach(deploy_registry)
+facade.attach(analytics_counter)
+facade.attach(decision_log)
 
 
-def load_json(path, default):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        # Em caso de erro no ficheiro, o serviço continua com valores por omissão
-        return default
-
-
-JSON_PARAMS = load_json(
-    JSON_PARAMS_PATH,
-    default=[],
-)
-
-ANALYTICS_SCHEMA = load_json(
-    ANALYTICS_SCHEMA_PATH,
-    default={"quantAnalytics": [], "qualAnalytics": []},
-)
-
-
-# =============================================================================
-# Padrão de criação: Factory Method
-# =============================================================================
-
-
-class AnalyticsRepository(ABC):
-    """
-    Interface para repositórios de analytics do Activity Provider ProPlan.
-
-    Esta abstração permite trocar a implementação concreta (por exemplo,
-    ficheiro JSON, base de dados relacional, mock para testes) sem alterar
-    o código dos endpoints Flask que consomem analytics.
-    """
-
-    @abstractmethod
-    def get_analytics(self, activity_id: str) -> list[dict]:
-        """
-        Devolve os dados analíticos para uma dada instância de atividade.
-
-        :param activity_id: Identificador da instância na Inven!RA.
-        :return: Lista de registos de analytics, compatível com o esquema Inven!RA.
-        """
-        raise NotImplementedError
-
-
-class JsonAnalyticsRepository(AnalyticsRepository):
-    """
-    Implementação concreta de AnalyticsRepository que constrói os analytics
-    com base no esquema definido em analytics_url.json (ANALYTICS_SCHEMA)
-    e em dados fictícios.
-
-    Nesta fase, os valores são de exemplo, mas o desenho prepara a futura
-    migração para uma origem de dados persistente.
-    """
-
-    def get_analytics(self, activity_id: str) -> list[dict]:
-        # Exemplo de estudante fictício (apenas um registo para já)
-        student_id = "1001"
-
-        quant_values: list[dict] = []
-        for qa in ANALYTICS_SCHEMA.get("quantAnalytics", []):
-            name = qa.get("name")
-            type_ = qa.get("type")
-
-            # Valores puramente ilustrativos para a fase atual
-            example = 0
-            if type_ == "integer":
-                if name == "decisions_count":
-                    example = 12
-                elif name == "total_time_seconds":
-                    example = 3600
-                elif name == "cost_variance":
-                    example = -500
-                elif name == "schedule_variance_days":
-                    example = 2
-                elif name == "client_satisfaction_score":
-                    example = 4
-                elif name == "replans_count":
-                    example = 1
-
-            quant_values.append(
-                {
-                    "name": name,
-                    "type": type_,
-                    "value": example,
-                }
-            )
-
-        qual_values: list[dict] = []
-        for qa in ANALYTICS_SCHEMA.get("qualAnalytics", []):
-            name = qa.get("name")
-            type_ = qa.get("type")
-
-            if type_ == "URL":
-                if name == "decision_log_url":
-                    value = f"{BASE_URL}/analytics/{activity_id}/{student_id}/decision-log"
-                elif name == "timeline_url":
-                    value = f"{BASE_URL}/analytics/{activity_id}/{student_id}/timeline"
-                else:
-                    value = f"{BASE_URL}/analytics/{activity_id}/{student_id}/{name}"
-            elif type_ == "text/plain":
-                if name == "postmortem_reflection":
-                    value = (
-                        "Reflexão de exemplo: o grupo conseguiu cumprir o prazo, "
-                        "mas com ligeiro aumento de custo para manter a qualidade."
-                    )
-                else:
-                    value = "Texto de exemplo."
-            else:
-                value = None
-
-            qual_values.append(
-                {
-                    "name": name,
-                    "type": type_,
-                    "value": value,
-                }
-            )
-
-        response = [
-            {
-                "inveniraStdID": student_id,
-                "quantAnalytics": quant_values,
-                "qualAnalytics": qual_values,
-            }
-        ]
-
-        return response
-
-
-class RepositoryFactory:
-    """
-    Fábrica responsável por criar instâncias de AnalyticsRepository.
-
-    Nesta fase, o Factory Method devolve sempre uma instância de
-    JsonAnalyticsRepository, mas o ponto de variação fica encapsulado
-    neste método. Uma futura implementação baseada em base de dados
-    poderia ser introduzida aqui, sem alterar o endpoint Flask.
-    """
-
-    @staticmethod
-    def create_analytics_repository() -> AnalyticsRepository:
-        """
-        Factory Method: decide qual implementação concreta de
-        AnalyticsRepository devolver.
-        """
-        return JsonAnalyticsRepository()
-
-
-# "Base de dados" em memória para a semana 1 (mock)
-DEPLOYED_ACTIVITIES: dict[str, dict] = {}
-
-
-# Endpoints Inven!RA
-
+# -------------------------------------------------------------------------
+# Endpoints Inven!RA (HTTP thin endpoints)
+# -------------------------------------------------------------------------
 
 @app.get("/config-proplan")
 def config_proplan():
@@ -286,17 +100,17 @@ def config_proplan():
     config_url:
     Página HTML de configuração da atividade, embebida pela Inven!RA.
     """
-    return render_template("config_proplan.html")
+    html = app_service.get_config_page()
+    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.get("/json-params-proplan")
 def json_params_proplan():
     """
     json_params_url:
-    Devolve a lista de parâmetros da atividade (nome e tipo),
-    conforme especificação Inven!RA.
+    Devolve a lista de parâmetros da atividade, conforme especificação Inven!RA.
     """
-    return jsonify(JSON_PARAMS)
+    return jsonify(app_service.get_json_params())
 
 
 @app.get("/deploy-proplan")
@@ -304,25 +118,14 @@ def deploy_proplan():
     """
     user_url (deploy):
     Recebe o identificador da instância na Inven!RA (activityID)
-    e devolve o URL de lançamento (launch URL) dessa instância.
-    Nesta fase os dados são apenas simulados.
+    e devolve o URL de acesso dessa instância.
     """
-    activity_id = request.args.get("activityID")
-
-    if not activity_id:
-        return "Parâmetro 'activityID' em falta.", 400
-
-    # URL da instância da atividade ProPlan
-    access_url = f"{BASE_URL}/atividade/{activity_id}"
-
-    # Guardar em memória para futura extensão (não é obrigatório nesta fase)
-    DEPLOYED_ACTIVITIES[activity_id] = {
-        "access_url": access_url,
-        "params": {},
-    }
-
-    # A especificação permite devolver simplesmente o URL em texto plano
-    return access_url, 200, {"Content-Type": "text/plain; charset=utf-8"}
+    try:
+        activity_id = request.args.get("activityID")
+        access_url = app_service.deploy_activity(activity_id)
+        return access_url, 200, {"Content-Type": "text/plain; charset=utf-8"}
+    except InvalidRequestError as e:
+        return str(e), 400
 
 
 @app.get("/analytics-list-proplan")
@@ -330,78 +133,27 @@ def analytics_list_proplan():
     """
     analytics_list_url:
     Lista dos analytics quantitativos e qualitativos que o ProPlan recolhe.
-
-    A obtenção do contrato é agora delegada no ProPlanServiceFacade,
-    garantindo coerência com o endpoint analytics_url.
     """
-    return jsonify(facade.get_analytics_contract()), 200
+    return jsonify(app_service.get_analytics_contract()), 200
 
-
-'''
-@app.get("/analytics-list-proplan")
-def analytics_list_proplan():
-    """
-    analytics_list_url:
-    Lista dos analytics quantitativos e qualitativos que o ProPlan recolhe.
-    Usa o ficheiro analytics_url.json como esquema.
-    """
-    return jsonify(ANALYTICS_SCHEMA)
-
-'''
-'''
-@app.post("/analytics-proplan")
-def analytics_proplan():
-    """
-    analytics_url:
-    Recebe um JSON com { "activityID": "<id>" } e devolve
-    analytics fictícios para essa instância, num formato
-    compatível com a Inven!RA.
-
-    A lógica de construção dos analytics foi encapsulada no
-    padrão de criação Factory Method, através da RepositoryFactory.
-    """
-    data = request.get_json(silent=True) or {}
-    activity_id = data.get("activityID")
-
-    if not activity_id:
-        return jsonify({"error": "Campo 'activityID' em falta."}), 400
-
-    # Criação do repositório via Factory Method
-    repo = RepositoryFactory.create_analytics_repository()
-
-    # Obtenção dos dados analíticos a partir do repositório
-    response = repo.get_analytics(activity_id=activity_id)
-
-    return jsonify(response)
-
-'''
-
-# =============================================================================
-# Padrão de Estrutura: Facade
-# =============================================================================
 
 @app.post("/analytics-proplan")
 def analytics_proplan():
     """
     analytics_url:
     Recebe um JSON com { "activityID": "<id>" } e devolve
-    analytics fictícios para essa instância, num formato
-    compatível com a Inven!RA.
-
-    Neste passo, o endpoint fica "magro" e delega a orquestração
-    no ProPlanServiceFacade (Facade virado para dentro).
+    analytics compatíveis com a Inven!RA.
     """
     try:
         data = request.get_json(silent=True) or {}
         activity_id = data.get("activityID")
-        response = facade.get_analytics(activity_id)
+        response = app_service.get_analytics(activity_id)
         return jsonify(response), 200
     except InvalidRequestError as e:
         return jsonify({"error": str(e)}), 400
 
 
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    # Execução local para desenvolvimento
     app.run(host="0.0.0.0", port=5000, debug=True)

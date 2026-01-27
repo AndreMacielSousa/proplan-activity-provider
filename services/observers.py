@@ -10,7 +10,7 @@ from services.events import DomainEvent
 class DeployRegistryObserver:
     """
     Observador responsável por registar informação de deploy por activityID.
-    Implementação em memória (mock), suficiente para demonstrar o padrão.
+    Implementação em memória (mock), suficiente para demonstrar o padrão Observer.
     """
     deployments: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
@@ -42,7 +42,7 @@ class AnalyticsRequestCounterObserver:
 class DecisionLogObserver:
     """
     Observador responsável por manter um rasto textual de eventos relevantes
-    (mock), útil para suportar analytics qualitativos.
+    (mock), útil para suportar analytics qualitativos e auditoria leve.
     """
     logs: Dict[str, List[str]] = field(default_factory=dict)
 
@@ -51,9 +51,11 @@ class DecisionLogObserver:
             return
 
         self.logs.setdefault(event.activity_id, [])
+        ts = event.occurred_at.isoformat()
+
         if event.name == "ActivityDeployed":
             self.logs[event.activity_id].append(
-                f"[DEPLOY] access_url={event.payload.get('access_url')}"
+                f"{ts} [DEPLOY] access_url={event.payload.get('access_url')}"
             )
         else:
-            self.logs[event.activity_id].append("[ANALYTICS] pedido recebido")
+            self.logs[event.activity_id].append(f"{ts} [ANALYTICS] pedido recebido")

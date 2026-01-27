@@ -2,22 +2,28 @@
 # Fachada virada para dentro: concentra orquestração interna,
 # mantendo os endpoints Flask reduzidos a parsing e HTTP.
 
+from __future__ import annotations
+
 from services.events import EventPublisher, DomainEvent
 
 from exceptions import InvalidRequestError
 from serializers.analytics_serializer import serialize_analytics, serialize_contract
+from services.repositories import ProPlanRepository
 
 
 class ProPlanServiceFacade(EventPublisher):
     """
-    Fachada virada para dentro: concentra orquestração interna,
-    mantendo os endpoints Flask reduzidos a parsing e HTTP.
+    Fachada virada para dentro.
+
+    Responsabilidades:
+    - Validar pré-condições de operações (ex.: activityID obrigatório)
+    - Delegar acesso a dados/contratos ao repositório
+    - Publicar eventos de domínio (Observer) quando relevante
+    - Devolver respostas já normalizadas (serializers)
     """
 
-    def __init__(self, repo):
+    def __init__(self, repo: ProPlanRepository):
         super().__init__()
-        # 'repo' será, por agora, um objeto com funções já existentes no app.py
-        # (no próximo passo substituímos por uma classe/repositório dedicado).
         self._repo = repo
 
     def get_analytics(self, activity_id: str):
@@ -62,4 +68,3 @@ class ProPlanServiceFacade(EventPublisher):
         )
 
         return access_url
-
