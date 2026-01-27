@@ -1,7 +1,12 @@
-# ProPlan – Activity Provider (Semana 1)
+# ProPlan – Activity Provider
 
 ## 1. Enquadramento
 O **ProPlan** é um módulo *Activity Provider* integrado na arquitetura **Inven!RA**, permitindo a simulação de cenários de gestão de projetos. Esta semana foi implementada a **infraestrutura mínima** exigida para a fase inicial: um *web service* testável, respondendo aos cinco pedidos RESTful definidos na especificação oficial da Inven!RA (Morgado & Cassola, 2022).
+
+Ao longo da evolução do projeto, foram introduzidas refatorizações arquiteturais explícitas,
+motivadas pela identificação de um antipadrão emergente de concentração de responsabilidades
+(God Object / The Blob), mantendo sempre inalterado o comportamento observável dos endpoints
+definidos pela especificação Inven!RA.
 
 A implementação foi realizada em **Python + Flask**, com alojamento na plataforma **Render**.
 
@@ -24,19 +29,35 @@ Base URL do serviço já publicado:
 
 ## 3. Conteúdo incluído no repositório
 
-- `app.py` – Implementação dos 5 endpoints RESTful  
-- `requirements.txt` – Dependências (Flask + Gunicorn)  
-- `render.yaml` – Configuração do serviço para Render  
-- `json_params_url.json` – Lista de parâmetros de configuração  
-- `analytics_url.json` – Esquema de analytics (quantitativos e qualitativos)  
-- `templates/config_proplan.html` – Página HTML de configuração embebida
-- `services/proplan_facade.py` – Fachada interna (Facade) para orquestração dos pedidos
-- `serializers/analytics_serializer.py` – Normalização/serialização das respostas de analytics
+- `app.py` – Adaptador HTTP (endpoints RESTful e parsing de pedidos)
+- `application/proplan_app_service.py` – Camada de Application Service (orquestração dos casos de uso)
+- `services/proplan_facade.py` – Fachada interna (Facade + Subject do Observer)
+- `services/repositories.py` – Repositório agregador + Factory Method
+- `services/observers.py` – Observadores concretos (Observer)
+- `serializers/analytics_serializer.py` – Normalização/serialização das respostas
 - `exceptions.py` – Exceções de validação (mapeadas para HTTP 400)
+- `templates/config_proplan.html` – Página HTML de configuração embebida
+- `json_params_url.json` – Lista de parâmetros de configuração
+- `analytics_url.json` – Esquema de analytics (quantitativos e qualitativos)
+- `requirements.txt` – Dependências
+- `render.yaml` – Configuração do serviço para Render
 
 ---
 
-## 4. Testes recomendados
+## 4. Refatorização arquitetural aplicada
+
+Durante a evolução do projeto foi identificada a tendência para concentração excessiva de
+responsabilidades no módulo `app.py`, um sintoma típico do antipadrão God Object / The Blob.
+Embora funcionalmente aceitável numa fase inicial, esta abordagem comprometeria a coesão e
+a manutenibilidade do sistema à medida que este evoluísse.
+
+A decisão tomada foi aplicar uma refatorização arquitetural explícita, introduzindo uma camada
+de Application Service e um repositório agregador, mantendo o comportamento observável dos
+endpoints e a compatibilidade total com a especificação Inven!RA.
+
+---
+
+## 5. Testes recomendados
 
 ### POST
 
@@ -62,7 +83,7 @@ GET – Configuração HTML
 GET https://proplan-activity-provider.onrender.com/config-proplan
 
 
-## 5. Padrão de criação aplicado (Factory Method)
+## 6. Padrão de criação aplicado (Factory Method)
 
 Na segunda fase do projeto foi aplicado o padrão de criação Factory Method (Gamma et al., 1995) ao processo de obtenção dos dados analíticos usados pelo serviço analytics_url (POST /analytics-proplan).
 
@@ -72,13 +93,13 @@ Para encapsular o ponto de variação — a origem e forma de criação dos repo
 
 O endpoint /analytics-proplan passa assim a depender apenas da abstração AnalyticsRepository, reduzindo o acoplamento e preparando o módulo para futura extensibilidade, tal como recomendado nas boas práticas de design de software e na unidade curricular de Arquitetura e Padrões de Software.
 
-## 6. Padrão estrutural aplicado (Facade)
+## 7. Padrão estrutural aplicado (Facade)
 
 Na fase atual foi aplicado o padrão estrutural **Facade** (GAMMA et al., 1995) para reduzir o acoplamento entre a camada de endpoints Flask e o subsistema interno responsável pela validação do pedido, seleção do repositório e preparação/normalização das respostas.
 
 No contexto Inven!RA, o Activity Provider é essencialmente **reativo** (não inicia interações; responde a pedidos). Por isso, a fachada não está “virada para a Inven!RA” (que define a sua API e não se adapta ao fornecedor), mas sim **virada para dentro**, funcionando como um “entreposto” de orquestração para os subcomponentes internos.
 
-### 6.1. Alterações realizadas
+### 7.1. Alterações realizadas
 Foi introduzido o componente `ProPlanServiceFacade` e, de forma incremental, os endpoints abaixo passaram a delegar nele:
 
 - `POST /analytics-proplan` (analytics_url): valida `activityID`, obtém dados via repositório e devolve analytics no formato esperado.
@@ -86,16 +107,21 @@ Foi introduzido o componente `ProPlanServiceFacade` e, de forma incremental, os 
 
 Este desenho permite manter os endpoints “magros” (parsing e códigos HTTP) e concentrar as regras/compromissos do subsistema no Facade, melhorando legibilidade, manutenção e extensibilidade.
 
-### 6.2. Estrutura introduzida no repositório
+Após a refatorização, os endpoints Flask deixaram de conter lógica de orquestração,
+passando a delegar exclusivamente no Application Service, que por sua vez delega
+na Fachada. Esta decisão elimina a dependência direta entre HTTP e lógica de domínio,
+reduzindo o risco de concentração de responsabilidades no ponto de entrada.
+
+### 7.2. Estrutura introduzida no repositório
 - `services/proplan_facade.py` – implementação do `ProPlanServiceFacade`
 - `serializers/analytics_serializer.py` – ponto único para normalização (nesta fase com comportamento pass-through)
 - `exceptions.py` – exceções de validação (ex.: `InvalidRequestError`)
 
-## 7. Padrão comportamental aplicado (Observer)
+## 8. Padrão comportamental aplicado (Observer)
 
 Na fase atual do projeto foi aplicado o padrão comportamental **Observer** (Gamma et al., 1995) ao núcleo de orquestração interna do Activity Provider, concretamente ao componente `ProPlanServiceFacade`.
 
-### 7.1. Motivação
+### 8.1. Motivação
 
 O Activity Provider ProPlan é, por natureza, um sistema **reativo**, respondendo a eventos externos como:
 - pedidos de deploy de instâncias (`user_url`);
@@ -108,7 +134,7 @@ Neste contexto, identificou-se a necessidade de desacoplar o fluxo principal de 
 
 O padrão Observer permite explicitar estes pontos de variação sem introduzir dependências diretas entre a fachada e essas funcionalidades secundárias.
 
-### 7.2. Ponto de aplicação no projeto
+### 8.2. Ponto de aplicação no projeto
 
 O componente `ProPlanServiceFacade` atua simultaneamente como:
 - **Facade** (padrão estrutural), concentrando a orquestração interna;
@@ -118,7 +144,7 @@ Foram definidos eventos explícitos de ciclo de vida:
 - `ActivityDeployed` – emitido após o deploy de uma instância;
 - `AnalyticsRequested` – emitido aquando de pedidos ao serviço `analytics_url`.
 
-### 7.3. Observadores concretos implementados
+### 8.3. Observadores concretos implementados
 
 Foram implementados os seguintes *ConcreteObservers*, registados no arranque da aplicação:
 
@@ -128,7 +154,13 @@ Foram implementados os seguintes *ConcreteObservers*, registados no arranque da 
 
 Estas implementações são deliberadamente leves e em memória, sendo suficientes para demonstrar o padrão e mantendo o sistema alinhado com a fase atual do projeto.
 
-### 7.4. Benefícios arquiteturais
+Nota: nos diagramas de sequência, o evento é explicitamente publicado pela Fachada,
+e apenas os observadores relevantes para cada cenário são representados, de forma a
+manter os diagramas focados no padrão aplicado e alinhados com os critérios de avaliação
+dos trabalhos anteriores.
+
+
+### 8.4. Benefícios arquiteturais
 
 A aplicação do padrão Observer permite:
 - reduzir o acoplamento entre a fachada e funcionalidades transversais;
@@ -138,7 +170,7 @@ A aplicação do padrão Observer permite:
 
 O comportamento observável dos endpoints permanece inalterado, garantindo compatibilidade com a especificação Inven!RA.
 
-## 8. Referências
+## 9. Referências
 
 GAMMA, E.; HELM, R.; JOHNSON, R.; VLISSIDES, J. **Design patterns: elements of reusable object-oriented software**. Reading: Addison-Wesley, 1995.
 
@@ -148,7 +180,7 @@ GRILO, R. et al. Assessment and tracking of learning activities on a remote comp
 
 CARDOSO, P.; MORGADO, L.; COELHO, A. Authoring game-based learning activities that are manageable by teachers. *[S.l.]*, 2020.
 
-## 9. Autor
+## 10. Autor
 André Sousa – 1300012
 Mestrado em Engenharia Informática e Tecnologia Web – Universidade Aberta
 Unidade Curricular: Arquitetura e Padrões de Software
